@@ -139,7 +139,11 @@ var BXP=X(C.s);                        /* B 点画布坐标 */
 var q=1,t=0,playing=false,speed=1,lastTs=0;
 var q1Dur=3.2;
 
-function tMax(){return q===1?q1Dur:(q===2?D.tSlide:D.tTotal);}
+function tMax(){
+  if(q===1)return q1Dur;
+  var base=(q===2?D.tSlide:D.tTotal);
+  return base+0.35;   /* 尾部留 0.35s 静止展示，确保能看到最终结论 */
+}
 
 /* ---------- 绘图工具 ---------- */
 function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
