@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>冰块运送问题 · 三问动画演示</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --ink:#1f2430; --sub:#5b6472; --line:#d8dde5;
+    --blue:#2f6fd0; --blue-l:#e8f0fc; --amber:#e08a1e; --amber-l:#fdf1de;
+    --green:#1f9d6b; --red:#d64545;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:var(--bg);color:var(--ink);padding:18px 22px;max-width:1300px;margin:0 auto}
+  h1{font-size:21px;font-weight:600;margin-bottom:4px}
+  .subtitle{font-size:13px;color:var(--sub);margin-bottom:14px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:9px 18px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;font-size:14px;color:var(--sub);transition:.15s}
+  .tab:hover{border-color:var(--blue)}
+  .tab.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:600}
+  .wrap{display:grid;grid-template-columns:1fr 330px;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  canvas{display:block;width:100%;border-radius:8px;background:#fbfcfe}
+  .ctrl{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+  button.act{padding:8px 16px;border:none;border-radius:8px;background:var(--blue);color:#fff;cursor:pointer;font-size:14px}
+  button.act.ghost{background:#eef2f8;color:var(--ink)}
+  input[type=range]{flex:1;min-width:180px;accent-color:var(--blue)}
+  .speed{font-size:13px;color:var(--sub)}
+  .speed button{padding:4px 10px;margin-left:4px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;font-size:12px}
+  .speed button.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue);font-weight:600}
+  .panel h2{font-size:15px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dashed #eef0f4}
+  .kv b{font-variant-numeric:tabular-nums;font-weight:600}
+  .note{margin-top:10px;font-size:12.5px;line-height:1.65;color:var(--sub);background:#f7f9fc;border-radius:8px;padding:10px}
+  .formula{margin-top:10px;font-size:12.5px;line-height:1.85;background:var(--blue-l);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px}
+  .formula .hi{color:var(--blue);font-weight:700}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--sub);margin-top:10px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <h1>冰块运送问题 · 三问动画演示</h1>
+  <div class="subtitle">厦门一中 2026 届高三 10 月月考 第 15 题 &nbsp;|&nbsp; μ₁=0.05，L=0.5 m，m₁=50 kg，s=1.5 m，v₂=2√2 m/s，m₂=50 kg，g=10 m/s²</div>
+
+  <div class="tabs">
+    <div class="tab on" data-q="1">① 中点过 B 的加速度</div>
+    <div class="tab" data-q="2">② 破冰工具滑上 · μ₂</div>
+    <div class="tab" data-q="3">③ 进入 BC · 最终位置</div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <canvas id="cv" width="920" height="460"></canvas>
+      <div class="ctrl">
+        <button class="act" id="play">▶ 播放</button>
+        <button class="act ghost" id="reset">↺ 重置</button>
+        <input type="range" id="seek" min="0" max="1000" value="0">
+        <span class="speed">倍速
+          <button data-s="0.5">0.5×</button>
+          <button data-s="1" class="on">1×</button>
+          <button data-s="2">2×</button>
+        </span>
+      </div>
+      <div class="legend">
+        <span><i style="background:#8fa0b8"></i>光滑 AB 段</span>
+        <span><i style="background:#c98a2e"></i>粗糙 BC 段（斜线阴影）</span>
+        <span><i style="background:#4a86e8"></i>冰块 m₁=50 kg</span>
+        <span><i style="background:#e08a1e"></i>破冰工具 m₂=50 kg</span>
+        <span><i style="background:#d64545"></i>速度矢量</span>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <h2 id="ptitle">第 1 问 · 中点到达 B 点</h2>
+      <div class="kv"><span>冰块左端位置</span><b id="k1">0.00 m</b></div>
+      <div class="kv"><span>冰块速度 v</span><b id="k2">—</b></div>
+      <div class="kv"><span>地面摩擦力 f</span><b id="k3">0.0 N</b></div>
+      <div class="kv"><span>加速度 a</span><b id="k4">—</b></div>
+      <div class="kv"><span>压在 BC 上的长度</span><b id="k5">0.00 m</b></div>
+      <div class="kv" id="row6"><span>工具相对冰块位移</span><b id="k6">0.00 m</b></div>
+      <div class="note" id="note">给冰块一个向右初速度，中点到达 B 时恰好有一半压在粗糙 BC 段上。</div>
+      <div class="formula" id="formula"></div>
+    </div>
+  </div>
+
+<script>
+/* ===== 物理内核：与 physics-core.js 完全一致（Node 20 项测试通过） ===== */
+(function(root,factory){root.PC=factory();})(this,function(){
+'use strict';
+var CFG={mu1:0.05,L:0.5,m1:50,s:1.5,g:10,v2:2*Math.sqrt(2),m2:50,mu2:0.4};
+function enterV(cfg,v0,x){var mu1=cfg.mu1,L=cfg.L,m1=cfg.m1,m2=cfg.m2,g=cfg.g,M=m1+m2;var val=v0*v0-(2*mu1*m2*g*x)/M-(mu1*m1*g*x*x)/(L*M);return Math.sqrt(Math.max(0,val));}
+function integrateEnterTime(cfg,v0,L){var N=20000,dx=L/N,t=0,i,xm,v;for(i=0;i<N;i++){xm=(i+0.5)*dx;v=enterV(cfg,v0,xm);if(v<=0)break;t+=dx/v;}return t;}
+function derive(cfg){
+  var mu1=cfg.mu1,L=cfg.L,m1=cfg.m1,s=cfg.s,g=cfg.g,v2=cfg.v2,m2=cfg.m2,mu2=cfg.m2?cfg.mu2:cfg.mu2,M=m1+m2;
+  var aMid=mu1*g/2;
+  var a1=mu2*m2*g/m1,a2=mu2*m2*g/m2;
+  var tSlide=2*L/v2;
+  var vCom=v2-a2*tSlide;
+  var xIceSlide=0.5*a1*tSlide*tSlide;
+  var xToolSlide=v2*tSlide-0.5*a2*tSlide*tSlide;
+  var iceRightAtCom=xIceSlide+L;
+  var distAB=s-iceRightAtCom;
+  var tAB=distAB/vCom;
+  var Wenter=mu1*m2*g*L+0.5*mu1*m1*g*L;
+  var Ek0=0.5*M*vCom*vCom;
+  var fFull=mu1*M*g;
+  var d=(Ek0-Wenter)/fFull;
+  var xFinal=s+L+d;
+  var vAtFull=Math.sqrt(Math.max(0,vCom*vCom-2*Wenter/M));
+  var dCheck=vAtFull*vAtFull/(2*mu1*g);
+  var aEnterMax=fFull/M,fNeedMax=m2*aEnterMax,fStaticMax=mu2*m2*g;
+  var tEnter=integrateEnterTime(cfg,vCom,L);
+  var tDecel=vAtFull/(mu1*g);
+  return{M:M,aMid:aMid,a1:a1,a2:a2,tSlide:tSlide,vCom:vCom,xIceSlide:xIceSlide,xToolSlide:xToolSlide,iceRightAtCom:iceRightAtCom,distAB:distAB,tAB:tAB,Wenter:Wenter,Ek0:Ek0,fFull:fFull,d:d,xFinal:xFinal,vAtFull:vAtFull,dCheck:dCheck,aEnterMax:aEnterMax,fNeedMax:fNeedMax,fStaticMax:fStaticMax,tEnter:tEnter,tDecel:tDecel,tTotal:tSlide+tAB+tEnter+tDecel};
+}
+function stateAt(cfg,t){
+  var D=derive(cfg),L=cfg.L,s=cfg.s,g=cfg.g,mu1=cfg.mu1;
+  var t1=D.tSlide,t2=t1+D.tAB,t3=t2+D.tEnter,t4=t3+D.tDecel;
+  if(t<=t1){var xi=0.5*D.a1*t*t,xt=cfg.v2*t-0.5*D.a2*t*t;return{phase:'slide',phaseIdx:1,xIce:xi,vIce:D.a1*t,aIce:D.a1,xTool:xt,vTool:cfg.v2-D.a2*t,enterX:0,fGround:0,note:'工具在冰块上向右相对滑动，冰块在光滑 AB 段加速'};}
+  if(t<=t2){var tau=t-t1,xii=D.xIceSlide+D.vCom*tau;return{phase:'uniform',phaseIdx:2,xIce:xii,vIce:D.vCom,aIce:0,xTool:xii+L,vTool:D.vCom,enterX:0,fGround:0,note:'工具到达冰块右端并共速，二者一起在光滑 AB 段匀速'};}
+  if(t<=t3){var tau2=t-t2,x=0,steps=Math.max(1,Math.round(tau2/0.0005)),dt=tau2/steps,i,v;for(i=0;i<steps;i++){v=enterV(cfg,D.vCom,x);if(v<=0)break;x+=v*dt;if(x>=L){x=L;break;}}var xis=s-L+x,f=cfg.mu1*(cfg.m2+cfg.m1*x/L)*g;return{phase:'enter',phaseIdx:3,xIce:xis,vIce:enterV(cfg,D.vCom,x),aIce:-f/D.M,xTool:xis+L,vTool:enterV(cfg,D.vCom,x),enterX:x,fGround:f,note:'冰块进入粗糙 BC 段，摩擦力随进入长度线性增大'};}
+  if(t<=t4){var tau3=t-t3,v2v=Math.max(0,D.vAtFull-mu1*g*tau3),travel=D.vAtFull*tau3-0.5*mu1*g*tau3*tau3,xid=s+travel;return{phase:'decel',phaseIdx:4,xIce:xid,vIce:v2v,aIce:-mu1*g,xTool:xid+L,vTool:v2v,enterX:L,fGround:D.fFull,note:'冰块完全进入 BC 段，受恒定摩擦力匀减速'};}
+  var xie=s+D.d;return{phase:'stop',phaseIdx:5,xIce:xie,vIce:0,aIce:0,xTool:xie+L,vTool:0,enterX:L,fGround:D.fFull,note:'冰块静止，右端到 A 点 3.625 m'};
+}
+return{CFG:CFG,derive:derive,stateAt:stateAt,enterV:enterV};
+});
+
+var C=PC.CFG,D=PC.derive(C);
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W=cv.width,H=cv.height;
+var X0=70,X1=880,SCALE=(X1-X0)/4.2;   /* 物理 x -> 画布 x，域 [0,4.2] m */
+var GY=300;                            /* 冰面基线 y */
+var BH=54;                             /* 冰块高度 px */
+function X(x){return X0+x*SCALE;}
+var BXP=X(C.s);                        /* B 点画布坐标 */
+
+/* ---------- UI 状态 ---------- */
+var q=1,t=0,playing=false,speed=1,lastTs=0;
+var q1Dur=3.2;
+
+function tMax(){return q===1?q1Dur:(q===2?D.tSlide:D.tTotal);}
+
+/* ---------- 绘图工具 ---------- */
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function arrow(x1,y1,x2,y2,color,wd){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=wd||2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();var a=Math.atan2(y2-y1,x2-x1);var s=8;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-s*Math.cos(a-0.45),y2-s*Math.sin(a-0.45));ctx.lineTo(x2-s*Math.cos(a+0.45),y2-s*Math.sin(a+0.45));ctx.closePath();ctx.fill();}
+function dblArrow(x1,x2,y,label,color){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x1+6,y-4);ctx.lineTo(x1+6,y+4);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x2,y);ctx.lineTo(x2-6,y-4);ctx.lineTo(x2-6,y+4);ctx.closePath();ctx.fill();ctx.font='13px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(label,(x1+x2)/2,y-8);}
+
+/* ---------- 主绘制 ---------- */
+function draw(st){
+  ctx.clearRect(0,0,W,H);
+
+  /* 顶部数据条 */
+  ctx.textAlign='left';ctx.fillStyle='#1f2430';ctx.font='600 15px "Microsoft YaHei"';
+  ctx.fillText(['','① 中点过 B 的加速度','② 工具滑上 · 求 μ₂','③ 进入 BC · 最终位置'][q],20,26);
+  ctx.font='13px "Microsoft YaHei"';ctx.fillStyle='#5b6472';
+  var speedTxt=(q===1?'演示中':('v冰 '+st.vIce.toFixed(3)+' m/s'));
+  ctx.fillText(speedTxt+'    f地 '+st.fGround.toFixed(1)+' N    a '+(st.aIce>=0?'+':'')+st.aIce.toFixed(3)+' m/s²',20,48);
+
+  /* 冰面：AB 光滑（单实线），BC 粗糙（斜线阴影） */
+  ctx.strokeStyle='#8fa0b8';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(X0,GY);ctx.lineTo(BXP,GY);ctx.stroke();          /* AB */
+  ctx.strokeStyle='#c98a2e';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(BXP,GY);ctx.lineTo(X(4.1),GY);ctx.stroke();      /* BC 基线 */
+  ctx.strokeStyle='#d9b473';ctx.lineWidth=1.5;                               /* BC 斜线阴影 */
+  for(var xx=BXP;xx<X(4.1);xx+=12){ctx.beginPath();ctx.moveTo(xx,GY);ctx.lineTo(xx-8,GY+10);ctx.stroke();}
+  /* A B C 点 */
+  [['A',0],['B',C.s],['C',4.1]].forEach(function(p){
+    ctx.fillStyle='#1f2430';ctx.beginPath();ctx.arc(X(p[1]),GY,3.5,0,7);ctx.fill();
+    ctx.font='14px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText(p[0],X(p[1]),GY+24);
+  });
+
+  /* 冰块（分段着色：AB 蓝 / BC 橙） */
+  var xl=X(st.xIce),xr=X(st.xIce+C.L),ytop=GY-BH;
+  var split=Math.min(Math.max(xl,BXP),xr);
+  if(split>xl+0.5){roundRect(xl,ytop,split-xl,BH,4);ctx.fillStyle='#4a86e8';ctx.fill();ctx.strokeStyle='#2f6fd0';ctx.lineWidth=1.5;ctx.stroke();}
+  if(xr>split+0.5){roundRect(split,ytop,xr-split,BH,4);ctx.fillStyle='#e8a94b';ctx.fill();ctx.strokeStyle='#c98a2e';ctx.lineWidth=1.5;ctx.stroke();}
+  if(xr<=BXP+0.5){roundRect(xl,ytop,xr-xl,BH,4);ctx.fillStyle='#4a86e8';ctx.fill();ctx.strokeStyle='#2f6fd0';ctx.lineWidth=1.5;ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.font='600 12px "Microsoft YaHei"';ctx.textAlign='center';
+  var lblX=(split>xl+0.5)?(xl+split)/2:(xl+xr)/2;
+  ctx.fillText('m₁',lblX,GY-BH/2+4);
+  /* 破冰工具（第1问不显示） */
+  if(q!==1){
+    var tx=X(st.xTool),ts=20;
+    roundRect(tx-ts/2,ytop-ts-2,ts,ts,3);ctx.fillStyle='#e08a1e';ctx.fill();ctx.strokeStyle='#b96d12';ctx.lineWidth=1.2;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='600 10px "Microsoft YaHei"';ctx.textAlign='center';ctx.fillText('m₂',tx,ytop-ts/2+1);
+  }
+
+  /* 标注：L 跟随冰块（题图甲，在冰块上方）；s 为 A→B 固定尺寸线 */
+  dblArrow(xl,xr,ytop-46,'L = 0.5 m','#2f6fd0');
+  dblArrow(X(0),BXP,GY+74,'s = 1.5 m（初始：冰块左端到 B）','#5b6472');
+
+  /* 速度矢量箭头：从质心出发，长度随 v 线性缩放 */
+  if(st.vIce>0.02){
+    var cx=(xl+xr)/2,vl=24+st.vIce*52,vy=GY+44;
+    arrow(cx,vy,cx+vl,vy,'#d64545',2.5);
+    ctx.fillStyle='#d64545';ctx.font='600 12px "Microsoft YaHei"';ctx.textAlign='left';
+    ctx.fillText('v = '+st.vIce.toFixed(2)+' m/s',cx+vl+8,vy+4);
+  }
+  if(q===3){
+    /* 最终距离标注：A(x=0) 到 最终右端 x=3.625 */
+    var finX=X(D.xFinal),aX=X0;
+    if(st.phase==='stop'){
+      dblArrow(aX,finX,150,'最终右端到 A：3.625 m','#1f9d6b');
+      ctx.strokeStyle='#1f9d6b';ctx.setLineDash([3,3]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(finX,160);ctx.lineTo(finX,GY-BH);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  /* 第1问：中点过 B 高亮 */
+  if(q===1){
+    var mid=st.xIce+C.L/2;
+    if(Math.abs(mid-C.s)<0.02){
+      ctx.fillStyle='#d64545';ctx.font='600 14px "Microsoft YaHei"';ctx.textAlign='left';
+      ctx.fillText('中点到达 B！一半压在 BC 上',X(C.s)-150,96);
+      arrow(X(C.s)-6,104,X(C.s)+2,ytop-6,'#d64545',2);
+    }
+  }
+  /* 第2问：共速标记 */
+  if(q===2){
+    if(st.phase==='uniform'){
+      ctx.fillStyle='#1f9d6b';ctx.font='600 14px "Microsoft YaHei"';ctx.textAlign='left';
+      ctx.fillText('恰好到达右端并共速：v = √2 m/s，μ₂ = 0.4',20,76);
+    }else if(st.phase==='slide'&&t>=D.tSlide*0.985){
+      ctx.fillStyle='#1f9d6b';ctx.font='600 14px "Microsoft YaHei"';ctx.textAlign='left';
+      ctx.fillText('恰好到达右端并共速：v = √2 m/s，μ₂ = 0.4',20,76);
+    }
+  }
+  /* 第3问：分段进度 */
+  if(q===3){
+    var names={slide:'① 相对滑动',uniform:'② 一起匀速',enter:'③ 进入 BC（变摩擦）',decel:'④ 完全进入匀减速',stop:'⑤ 静止'};
+    ctx.fillStyle='#2f6fd0';ctx.font='600 13px "Microsoft YaHei"';ctx.textAlign='left';
+    ctx.fillText(names[st.phase]||'',20,72);
+  }
+
+  /* 阶段说明 */
+  ctx.fillStyle='#5b6472';ctx.font='12.5px "Microsoft YaHei"';ctx.textAlign='left';
+  ctx.fillText(st.note,20,H-14);
+}
+
+/* ---------- 第1问演示状态：真实积分（v0 任意取 2 m/s） ---------- */
+var Q1_V0=2.0, Q1_STEP=0.0002, Q1_TRAJ=null;
+function buildQ1(){
+  var x=0,v=Q1_V0,arr=[],t=0;
+  while(t<6){
+    var ov=Math.max(0,Math.min(C.L,x+C.L-C.s));
+    var a=-C.mu1*C.g*ov/C.L;
+    arr.push({t:t,x:x,v:v,a:a,ov:ov,f:C.mu1*(C.m1*ov/C.L)*C.g});
+    if(x>=C.s-C.L/2)break;
+    v+=a*Q1_STEP;x+=v*Q1_STEP;t+=Q1_STEP;
+    if(v<0)v=0;
+  }
+  arr.push({t:t,x:C.s-C.L/2,v:v,a:-C.mu1*C.g/2,ov:C.L/2,f:C.mu1*(C.m1/2)*C.g});
+  Q1_TRAJ=arr;
+}
+buildQ1();
+function q1State(tau){
+  var frac=Math.min(1,tau/q1Dur);
+  var target=frac*(Q1_TRAJ[Q1_TRAJ.length-1].t);
+  var i=Math.min(Q1_TRAJ.length-1,Math.floor(target/Q1_STEP));
+  var s=Q1_TRAJ[i];
+  return{phase:'q1',phaseIdx:1,xIce:s.x,vIce:s.v,aIce:s.a,xTool:s.x,enterX:s.ov,fGround:s.f,
+         note:'中点到达 B 时，压在 BC 上的长度 = L/2 = 0.25 m'};
+}
+
+/* ---------- 面板更新 ---------- */
+function updatePanel(st){
+  document.getElementById('k1').textContent=st.xIce.toFixed(2)+' m';
+  document.getElementById('k2').textContent=st.vIce.toFixed(3)+' m/s';
+  document.getElementById('k3').textContent=st.fGround.toFixed(1)+' N';
+  document.getElementById('k4').textContent=(q===1&&st.aIce===0?'0':st.aIce.toFixed(3)+' m/s²');
+  document.getElementById('k5').textContent=st.enterX.toFixed(2)+' m';
+  var r6=document.getElementById('row6');
+  if(q===2){r6.style.display='flex';document.getElementById('k6').textContent=(st.xTool-st.xIce).toFixed(3)+' m';}
+  else{r6.style.display='none';}
+}
+var PANEL={
+  1:{title:'第 1 问 · 中点到达 B 点',note:'中点过 B 时恰好一半压在粗糙 BC 段上，地面摩擦力只作用在压入部分。',
+     formula:'压入长度 = L/2 = 0.25 m<br>f = μ₁·(m₁/2)·g = 12.5 N<br><span class="hi">a = f/m₁ = μ₁g/2 = 0.25 m/s²（向左）</span>'},
+  2:{title:'第 2 问 · 工具滑上求 μ₂',note:'“恰好到达右端”隐含工具与冰块共速；此前冰块始终在光滑 AB 段。',
+     formula:'v共 = v₂/2 = √2 m/s，t = 2L/v₂ = √2/4 s<br>x冰 = ½a₁t² = 0.25 m，x工 = v₂t−½a₂t² = 0.75 m<br>x工−x冰 = 0.5 m = L ✓<br><span class="hi">μ₂ = v共/(gt) = 0.4</span>'},
+  3:{title:'第 3 问 · 动能定理求终点',note:'共速后一起运动；进入 BC 过程摩擦力随进入长度线性增大，工具始终不相对滑动。',
+     formula:'进入阶段摩擦功 W₁ = μ₁m₂gL + ½μ₁m₁gL = 18.75 J<br>初动能 Eₖ = ½(m₁+m₂)v共² = 100 J<br>完全进入后 f = μ₁(m₁+m₂)g = 50 N<br><span class="hi">d = (100−18.75)/50 = 1.625 m<br>到右端 = s+L+d = 3.625 m</span>'}
+};
+function setPanel(){
+  var p=PANEL[q];
+  document.getElementById('ptitle').textContent=p.title;
+  document.getElementById('note').textContent=p.note;
+  document.getElementById('formula').innerHTML=p.formula;
+}
+
+/* ---------- 主循环 ---------- */
+function curState(){
+  if(q===1) return q1State(t);
+  return PC.stateAt(C,Math.min(t,D.tTotal+0.001));
+}
+var lastQ=-1;
+function frame(ts){
+  if(q!==lastQ){lastQ=q;setPanel();}
+  if(playing){
+    if(!lastTs)lastTs=ts;
+    var dt=(ts-lastTs)/1000*speed;lastTs=ts;
+    t+=dt;
+    if(t>=tMax()){t=tMax();playing=false;document.getElementById('play').textContent='▶ 播放';}
+    document.getElementById('seek').value=Math.round(t/tMax()*1000);
+  }else{lastTs=ts;}
+  var st=curState();
+  draw(st);updatePanel(st);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 事件 ---------- */
+document.querySelectorAll('.tab').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    q=parseInt(b.dataset.q,10);t=0;playing=false;lastTs=0;
+    document.getElementById('play').textContent='▶ 播放';
+    document.getElementById('seek').value=0;
+    setPanel();
+  };
+});
+document.getElementById('play').onclick=function(){
+  if(t>=tMax()-1e-6)t=0;
+  playing=!playing;lastTs=0;
+  this.textContent=playing?'❚❚ 暂停':'▶ 播放';
+};
+document.getElementById('reset').onclick=function(){t=0;playing=false;lastTs=0;document.getElementById('play').textContent='▶ 播放';document.getElementById('seek').value=0;};
+document.getElementById('seek').oninput=function(){t=parseFloat(this.value)/1000*tMax();playing=false;document.getElementById('play').textContent='▶ 播放';};
+document.querySelectorAll('.speed button').forEach(function(b){
+  b.onclick=function(){document.querySelectorAll('.speed button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');speed=parseFloat(b.dataset.s);};
+});
+setPanel();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
